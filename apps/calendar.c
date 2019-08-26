@@ -11,17 +11,21 @@
 #include <toaru/sdf.h>
 #include <toaru/menu.h>
 #include <toaru/button.h>
+#include <toaru/widgets.h>
 #include <toaru/colors.h>
 #include <time.h>
 #include <sys/time.h>
+#include <toaru/list.h>
 
-#define APP_VERSION "0.0.1"
-#define APP_COPYRIGHT "Copyright 2019 zanyxdev <\033[3mzanyxdev@gmail.com\033[23m>"
+#define APP_VERSION "0.0.2"
+#define APP_COPYRIGHT "Copyright 2019 ZanyXDev <\033[3mzanyxdev@gmail.com\033[23m>"
 
 #define BUTTON_HEIGHT 28
 #define BUTTON_WIDTH 28
 #define BUTTON_PADDING 7
 #define BTN_BACKGROUND premultiply(rgba(0, 0, 0, 150))
+
+#define NEW_BUTTON 1
 
 static yutani_t *yctx;
 static yutani_window_t *window = NULL;
@@ -42,8 +46,31 @@ struct TTKButton _left = {0};
 struct TTKButton _center = {0};
 struct TTKButton _right = {0};
 
-void set_current_month_year(char *pbuffer)
-{
+struct TWidget home_button = {0};
+static list_t *child_widgets = NULL;
+
+void init_widgets(void){
+
+	struct decor_bounds bounds;
+	decor_get_bounds(window, &bounds);
+
+	home_button.title = "abcdef";
+	home_button.width = BUTTON_WIDTH;
+	home_button.height = BUTTON_HEIGHT;
+	home_button.x = bounds.left_width + BUTTON_PADDING;
+	home_button.y = bounds.bottom_height - BUTTON_HEIGHT - BUTTON_PADDING;
+	home_button.types = PUSH_BUTTON;
+	home_button.color = BLACK; // disabled ? rgb(120, 120, 120) : rgb(0, 0, 0)
+	home_button.font_size = 16;
+	home_button.font_type = SDF_FONT_MONO_BOLD;
+	home_button.align = AlignCenter;
+
+	fprintf(stderr, "\ninit_widgets: child_widgets:%p, home_button:%p\n", child_widgets, &home_button);
+
+	list_insert(child_widgets, &home_button);
+}
+
+void set_current_month_year(char *pbuffer){
 	struct timeval now;
 	struct tm *timeinfo;
 
@@ -61,8 +88,7 @@ void set_current_month_year(char *pbuffer)
 	sprintf(pbuffer, "%s, %d", month_names[timeinfo->tm_mon], timeinfo->tm_year + 1900);
 }
 
-void setup_buttons(void)
-{
+void setup_buttons(void){
 	static char center_title[16];
 
 	set_current_month_year(center_title);
@@ -89,17 +115,25 @@ void setup_buttons(void)
 	_right.y = bounds.top_height + BUTTON_PADDING;
 }
 
-static void redraw(void)
-{
+static void redraw(void){
 	draw_fill(ctx, DIM_GRAY);
 
 	struct decor_bounds bounds;
 	decor_get_bounds(window, &bounds);
 
+#ifdef NEW_BUTTON
+	foreach (lnode, child_widgets)
+	{
+		t_widget_draw(ctx, lnode->value);
+		fprintf(stderr, "%p", lnode->value);
+	}
+#else
 	ttk_button_draw(ctx, &_left);
 	ttk_button_draw(ctx, &_center);
 	ttk_button_draw(ctx, &_right);
-
+	fprintf(stderr, "%p: redraw() left\n", &_left);
+#endif
+	
 	window->decorator_flags |= DECOR_FLAG_NO_MAXIMIZE;
 	render_decorations(window, ctx, title_str);
 
@@ -107,8 +141,7 @@ static void redraw(void)
 	yutani_flip(yctx, window);
 }
 
-int in_button(struct TTKButton *button, struct yutani_msg_window_mouse_event *me)
-{
+int in_button(struct TTKButton *button, struct yutani_msg_window_mouse_event *me){
 	if (me->new_y >= button->y && me->new_y < button->y + button->height)
 	{
 		if (me->new_x >= button->x && me->new_x < button->x + button->width)
@@ -120,8 +153,7 @@ int in_button(struct TTKButton *button, struct yutani_msg_window_mouse_event *me
 }
 
 /* Callback for mouse events */
-static void do_mouse_events(struct yutani_msg_window_mouse_event *evt)
-{
+static void do_mouse_events(struct yutani_msg_window_mouse_event *evt){
 	struct decor_bounds bounds;
 	decor_get_bounds(window, &bounds);
 
@@ -140,16 +172,7 @@ static void do_mouse_events(struct yutani_msg_window_mouse_event *evt)
 	}
 }
 
-int main(int argc, char *argv[])
-{
-	int req_center_x, req_center_y;
-
-	yctx = yutani_init();
-	if (!yctx)
-	{
-		fprintf(stderr, "%s: failed to connect to compositor\n", argv[0]);
-		return 1;
-	}
+void set_decoration(void){
 
 	init_decorations();
 
@@ -162,9 +185,21 @@ int main(int argc, char *argv[])
 	decor_bottom_height = bounds.bottom_height;
 	decor_width = bounds.width;
 	decor_height = bounds.height;
+}
 
-	window = yutani_window_create_flags(yctx, main_window_width + bounds.width, main_window_height + bounds.height, YUTANI_WINDOW_FLAG_DIALOG_ANIMATION);
-	fprintf(stderr, "window->height:%ld, window->width:%ld\n", window->height, window->width);
+int main(int argc, char *argv[]){
+	int req_center_x, req_center_y;
+
+	yctx = yutani_init();
+	if (!yctx){
+		fprintf(stderr, "%s: failed to connect to compositor\n", argv[0]);
+		return 1;
+	}
+	
+	set_decoration();
+
+	window = yutani_window_create_flags(yctx, main_window_width + decor_width, main_window_height + decor_height, YUTANI_WINDOW_FLAG_DIALOG_ANIMATION);
+	fprintf(stderr, "\nwindow->height:%ld, window->width:%ld\n", window->height, window->width);
 	req_center_x = yctx->display_width / 2;
 	req_center_y = yctx->display_height / 2;
 
@@ -174,16 +209,23 @@ int main(int argc, char *argv[])
 	yutani_window_advertise_icon(yctx, window, title_str, "calendar");
 	ctx = init_graphics_yutani_double_buffer(window);
 
-	fprintf(stderr, "ctx->height:%ld, ctx->width:%ld\n", ctx->height, ctx->width);
+	fprintf(stderr, "\nctx->height:%d, ctx->width:%d\n", ctx->height, ctx->width);
+
+#ifdef NEW_BUTTON
+	child_widgets = list_create();
+	fprintf(stderr, "\nint main()  child_widgets:%p", child_widgets );
+
+	init_widgets();
+#else
 	setup_buttons();
+#endif
 
 	redraw();
 
-	struct TTKButton *_down_button = NULL;
+	//struct TTKButton *_down_button = NULL;
 	int playing = 1;
 
-	while (playing)
-	{
+	while (playing){
 		/* Respond to Yutani events */
 		yutani_msg_t *m = yutani_poll(yctx);
 		while (m)
