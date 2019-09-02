@@ -52,6 +52,15 @@ void create_window(yutani_t * yctx, int left, int top, int width , int height );
 
 void redraw_window();
 
+void key_event_action(struct yutani_msg_key_event * me);
+
+void move_up();
+void move_down();
+void move_left();
+void move_right();
+void restart();
+void show_score();
+
 int main(int argc, char * argv[]) {
 
     int left, top, width , height;
@@ -76,7 +85,58 @@ int main(int argc, char * argv[]) {
     int playing = 1;
 	while (playing) {
         yutani_msg_t * m = yutani_poll(yctx);
-
+		while (m) {
+			if (menu_process_event(yctx, m)) {
+				/* just decorations should be fine */
+				decors();
+				flip(ctx);
+				yutani_flip(yctx, window);
+			}
+			switch (m->type){
+				case YUTANI_MSG_KEY_EVENT:
+					{
+						struct yutani_msg_key_event * key_event = (void*)m->data;
+						key_event_action( key_event );
+					}
+					break;
+				case YUTANI_MSG_RESIZE_OFFER:
+					{
+						struct yutani_msg_window_resize * wr = (void*)m->data;
+						if (wr->wid == window->wid) {
+							resize_finish(wr->width, wr->height);
+						}
+					}
+					break;	
+				case YUTANI_MSG_WINDOW_MOUSE_EVENT:
+					{
+						fprintf(stderr, "\nYUTANI_MSG_WINDOW_MOUSE_EVENT");
+						
+						struct yutani_msg_window_mouse_event * me = (void*)m->data;
+						int result = decor_handle_event(yctx, m);
+						switch (result) {
+							case DECOR_CLOSE:
+								playing = 0;
+								break;
+							case DECOR_RIGHT:
+								/* right click in decoration, show appropriate menu */
+								decor_show_default_menu(window, window->x + me->new_x, window->y + me->new_y);
+								break;
+							default:
+								/* Other actions */
+								break;
+						}
+					}
+					break;	
+				case YUTANI_MSG_WINDOW_CLOSE:
+				case YUTANI_MSG_SESSION_END:
+					playing = 0;
+					break;	
+				default:
+					break;
+			}
+			free(m);
+			m = yutani_poll_async(yctx);
+		}
     }
     yutani_close(yctx, window);
 
@@ -145,7 +205,7 @@ void redraw_window(){
 	decor_get_bounds(window, &bounds);
 
 	draw_fill(ctx, DIM_GRAY);
-	window->decorator_flags |= DECOR_FLAG_NO_MAXIMIZE;
+	//window->decorator_flags |= DECOR_FLAG_NO_MAXIMIZE;
 	decors();
 
 	flip(ctx);
@@ -153,3 +213,52 @@ void redraw_window(){
 
 }
 
+void key_event_action(struct yutani_msg_key_event * ke){
+	if (ke->event.action != KEY_ACTION_DOWN) return;
+
+	switch (ke->event.keycode){
+		case 'w':
+			move_up();
+			break;	
+		case 's':
+			move_down();
+			break;
+		case 'a':
+			move_left();
+			break;
+		case 'd':
+			move_right();
+			break;
+		case 'r':
+			if (ke->event.modifiers & YUTANI_KEY_MODIFIER_CTRL ) {
+				restart();					
+			}			
+			break;
+		case 't':
+			if (ke->event.modifiers & YUTANI_KEY_MODIFIER_CTRL ) {
+				show_score();				
+			}						
+			break;	
+		default:
+			break;
+		}
+}
+
+void move_up(){
+	fprintf(stderr,"\nkey pressed W");
+}
+void move_down(){
+	fprintf(stderr,"\nkey pressed S");
+}
+void move_left(){
+	fprintf(stderr,"\nkey pressed A");
+}
+void move_right(){
+fprintf(stderr,"\nkey pressed D");
+}
+void restart(){
+fprintf(stderr,"\nkey pressed CTRL-R");
+}
+void show_score(){
+fprintf(stderr,"\nkey pressed CTRL-T");
+}
