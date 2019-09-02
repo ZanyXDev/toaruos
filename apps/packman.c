@@ -47,6 +47,7 @@ static void decors() {
 }
 
 void setup_decorations();
+
 void create_window(yutani_t * yctx, int left, int top, int width , int height );
 
 void redraw_window();
@@ -63,8 +64,8 @@ int main(int argc, char * argv[]) {
 
 	setup_decorations();
 
-    width = MIN_WIDTH + decor_width;
-    height = MIN_HEIGHT + decor_height;
+    width = MIN_WIDTH * 2 + decor_width;
+    height = MIN_HEIGHT * 2 + decor_height;
 
     left= (yctx->display_width - width) / 2;
 	top = (yctx->display_height - height)/ 2;
@@ -143,9 +144,12 @@ void redraw_window(){
 	struct decor_bounds bounds;
 	decor_get_bounds(window, &bounds);
 
-	draw_fill(ctx, CHINESE_SILVER);
+	draw_fill(ctx, DIM_GRAY);
+	window->decorator_flags |= DECOR_FLAG_NO_MAXIMIZE;
 	decors();
+
 	flip(ctx);
-	yutani_flip(yctx, window);	
+	yutani_flip(yctx, window);
+
 }
 
