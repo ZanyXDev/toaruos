@@ -28,6 +28,7 @@
 #define BROWN            rgb(165, 42,  42)
 #define BURLYWOOD        rgb(222, 184, 135)
 #define CADET_BLUE       rgb(95,  158, 160)
+#define CHINESE_SILVER   rgb(204, 204, 204)
 #define CHARTREUSE       rgb(127, 255, 0)
 #define CHOCOLATE        rgb(210, 105, 30)
 #define CORAL            rgb(255, 127, 80)
