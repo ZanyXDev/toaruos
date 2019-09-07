@@ -34,8 +34,8 @@ static int decor_height = 0;
 static char * title_str = "Pac-Man for ToaruOS";
 static char * icon_path = "/usr/share/logo_login.bmp";
 
-#define MIN_WIDTH  224
-#define MIN_HEIGHT 288
+#define MIN_WIDTH  640	
+#define MIN_HEIGHT 480
 
 /**
  * Resize window when asked by the compositor.
@@ -73,8 +73,8 @@ int main(int argc, char * argv[]) {
 
 	setup_decorations();
 
-    width = MIN_WIDTH * 2 + decor_width;
-    height = MIN_HEIGHT * 2 + decor_height;
+    width = MIN_WIDTH  + decor_width;
+    height = MIN_HEIGHT  + decor_height;
 
     left= (yctx->display_width - width) / 2;
 	top = (yctx->display_height - height)/ 2;
@@ -98,7 +98,7 @@ int main(int argc, char * argv[]) {
 						struct yutani_msg_key_event * key_event = (void*)m->data;
 						key_event_action( key_event );
 					}
-					break;
+					break;					
 				case YUTANI_MSG_RESIZE_OFFER:
 					{
 						struct yutani_msg_window_resize * wr = (void*)m->data;
@@ -108,9 +108,7 @@ int main(int argc, char * argv[]) {
 					}
 					break;	
 				case YUTANI_MSG_WINDOW_MOUSE_EVENT:
-					{
-						fprintf(stderr, "\nYUTANI_MSG_WINDOW_MOUSE_EVENT");
-						
+					{											
 						struct yutani_msg_window_mouse_event * me = (void*)m->data;
 						int result = decor_handle_event(yctx, m);
 						switch (result) {
@@ -146,15 +144,19 @@ int main(int argc, char * argv[]) {
 static void resize_finish(int w, int h) {
 
 	if (w < MIN_WIDTH || h < MIN_HEIGHT) {
-		yutani_window_resize_offer(yctx, window, w < MIN_WIDTH  ? MIN_WIDTH  : w, 
-                                                 h < MIN_HEIGHT ? MIN_HEIGHT : h);
+		yutani_window_resize_offer(yctx, window, w < MIN_WIDTH ? MIN_WIDTH : w, h < MIN_HEIGHT ? MIN_HEIGHT : h);
 		return;
 	}
-
+	
 	int width_changed = (window->width != (unsigned int)w);
 
 	yutani_window_resize_accept(yctx, window, w, h);
 	reinit_graphics_yutani(ctx, window);
+
+		/* If the width changed, we need to rebuild the icon view */
+	if (width_changed) {
+		//reinitialize_contents();
+	}
 
 	/* Redraw */
 	redraw_window();
